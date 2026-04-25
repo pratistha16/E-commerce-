@@ -1,0 +1,200 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --button-outline: rgba(0,0,0, .10);
+    --badge-outline: rgba(0,0,0, .05);
+
+    /* Automatic computation of border around primary / danger buttons */
+    --opaque-button-border-intensity: -8; /* In terms of percentages */
+
+    /* Backgrounds applied on top of other backgrounds when hovered/active */
+    --elevate-1: rgba(0,0,0, .03);
+    --elevate-2: rgba(0,0,0, .08);
+
+    --background: 220 33% 98%; /* Light slate background */
+    --foreground: 224 71% 4%; /* Dark text */
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 224 71% 4%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 224 71% 4%;
+    --card-border: 220 13% 91%;
+
+    --sidebar: 224 71% 4%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-border: 224 71% 4%;
+    --sidebar-primary: 226 100% 65%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 215 28% 17%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-ring: 226 100% 65%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 71% 4%;
+    --popover-border: 220 13% 91%;
+
+    --primary: 226 100% 65%; /* Premium Indigo */
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 220 70% 15%;
+
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 8% 46%;
+
+    --accent: 220 14% 96%;
+    --accent-foreground: 220 70% 15%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+
+    --chart-1: 226 100% 65%;
+    --chart-2: 280 85% 55%;
+    --chart-3: 160 84% 39%;
+    --chart-4: 43 100% 50%;
+    --chart-5: 0 84% 60%;
+
+    --radius: .5rem; /* 8px */
+    
+    /* Fallback for older browsers */
+    --primary-border: hsl(226 100% 65%);
+    --secondary-border: hsl(220 14% 96%);
+    --muted-border: hsl(220 14% 96%);
+    --accent-border: hsl(220 14% 96%);
+    --destructive-border: hsl(0 84% 60%);
+    --sidebar-primary-border: hsl(226 100% 65%);
+    --sidebar-accent-border: hsl(215 28% 17%);
+  }
+
+  .dark {
+    --button-outline: rgba(255,255,255, .10);
+    --badge-outline: rgba(255,255,255, .05);
+
+    --opaque-button-border-intensity: 9;  /* In terms of percentages */
+
+    /* Backgrounds applied on top of other backgrounds when hovered/active */
+    --elevate-1: rgba(255,255,255, .04);
+    --elevate-2: rgba(255,255,255, .09);
+
+    --background: 224 71% 4%;
+    --foreground: 210 40% 98%;
+
+    --border: 215 28% 17%;
+    --input: 215 28% 17%;
+    --ring: 226 100% 65%;
+
+    --card: 224 71% 4%;
+    --card-foreground: 210 40% 98%;
+    --card-border: 215 28% 17%;
+
+    --sidebar: 224 71% 4%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-border: 215 28% 17%;
+    --sidebar-primary: 226 100% 65%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 215 28% 17%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-ring: 226 100% 65%;
+
+    --popover: 224 71% 4%;
+    --popover-foreground: 210 40% 98%;
+    --popover-border: 215 28% 17%;
+
+    --primary: 226 100% 65%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 215 28% 17%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 215 28% 17%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 215 28% 17%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+    
+    --primary-border: hsl(226 100% 65%);
+    --secondary-border: hsl(215 28% 17%);
+    --muted-border: hsl(215 28% 17%);
+    --accent-border: hsl(215 28% 17%);
+    --destructive-border: hsl(0 84% 60%);
+    --sidebar-primary-border: hsl(226 100% 65%);
+    --sidebar-accent-border: hsl(215 28% 17%);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-slate-200;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased selection:bg-primary/20 selection:text-primary;
+  }
+}
+
+@layer utilities {
+  .text-gradient-blue {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-400;
+  }
+  
+  .hover-elevate {
+    @apply transition-all duration-200 hover:bg-[--elevate-1];
+  }
+  
+  .active-elevate-2 {
+    @apply active:bg-[--elevate-2];
+  }
+}
+
+@layer components {
+  /* Professional Glass Panels */
+  .glass-panel {
+    @apply bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border border-slate-200/50 dark:border-white/10 shadow-sm rounded-3xl;
+  }
+
+  .glass-panel-hover {
+    @apply glass-panel transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 hover:bg-white/95 dark:hover:bg-slate-800/90;
+  }
+
+  /* Keep legacy btn classes for compatibility or migrate them */
+  .btn {
+    @apply inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply bg-primary text-primary-foreground border border-primary-border shadow-sm;
+  }
+
+  .btn-secondary {
+    @apply bg-secondary text-secondary-foreground border border-secondary-border shadow-sm;
+  }
+
+  .btn-outline {
+    @apply border border-[--button-outline] bg-background shadow-sm hover:bg-accent hover:text-accent-foreground;
+  }
+}
+
+/* Base custom styles */
+html {
+  scroll-behavior: smooth;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-background;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-muted-foreground/20 rounded-full border-2 border-transparent bg-clip-padding;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-muted-foreground/30;
+}
