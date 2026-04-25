@@ -24,53 +24,8 @@ if os.path.exists(dotenv_path):
 else:
     load_dotenv()
 
-from django.db import models
+# Quick-start development settings - unsuitable for production
 
-# Monkey-patch MongoDB field type check and Model hash
-def model_hash(self):
-    if not hasattr(self, '_pk_val') or self._pk_val is None:
-        return hash(id(self))
-    return hash(self._pk_val)
-models.Model.__hash__ = model_hash
-
-try:
-    from django_mongodb_backend.checks import DatabaseChecks
-    DatabaseChecks.check_field_type = lambda *args, **kwargs: []
-except ImportError:
-    pass
-
-# DRF MongoDB Fix: Convert ObjectId to string in serializers
-try:
-    from rest_framework import fields
-    from bson import ObjectId
-    
-    # Patch base Field
-    original_to_representation = fields.Field.to_representation
-    def patched_to_representation(self, value):
-        if isinstance(value, ObjectId):
-            return str(value)
-        return original_to_representation(self, value)
-    fields.Field.to_representation = patched_to_representation
-
-    # Patch IntegerField specifically since it calls int()
-    original_int_to_rep = fields.IntegerField.to_representation
-    def patched_int_to_rep(self, value):
-        if isinstance(value, ObjectId):
-            return str(value)
-        return original_int_to_rep(self, value)
-    fields.IntegerField.to_representation = patched_int_to_rep
-    
-    # Patch JSON Encoder for any remaining ObjectIds
-    from rest_framework.utils import encoders
-    original_default = encoders.JSONEncoder.default
-    def patched_default(self, obj):
-        if isinstance(obj, ObjectId):
-            return str(obj)
-        return original_default(self, obj)
-    encoders.JSONEncoder.default = patched_default
-
-except ImportError:
-    pass
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -90,22 +45,22 @@ X_FRAME_OPTIONS = 'DENY'
 CSRF_COOKIE_HTTPONLY = True
 SESSION_COOKIE_HTTPONLY = True
 
-# MongoDB Settings
-MONGODB_URI = os.getenv('MONGODB_URI')
-MONGODB_NAME = os.getenv('MONGODB_NAME', 'Ecommerce')
+# Database Configuration
+DB_NAME = os.getenv('DB_NAME', 'Ecomerce')
+DB_USER = os.getenv('DB_USER', 'postgres')
+DB_PASSWORD = os.getenv('DB_PASSWORD', 'pradeepa')
+DB_HOST = os.getenv('DB_HOST', 'localhost')
+DB_PORT = os.getenv('DB_PORT', '5432')
 
-
-# --- MONGO DB SILENCE CHECKS ---
-SILENCED_SYSTEM_CHECKS = ['mongodb.E001']
 
 # Application definition
 
 MIDDLEWARE = [
-    'core.middleware.TenantMiddleware', # Custom MongoDB Tenant Middleware
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'core.middleware.TenantMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'allauth.account.middleware.AccountMiddleware',
@@ -113,17 +68,24 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-DATABASE_ROUTERS = [
-    'core.router.TenantRouter',
-]
+
+# Multi-tenancy disabled for Postgres migration (using public schema initially)
+# DATABASE_ROUTERS = [
+#     'core.router.TenantRouter',
+# ]
+
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django_mongodb_backend',
-        'NAME': MONGODB_NAME,
-        'HOST': MONGODB_URI,
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': DB_NAME,
+        'USER': DB_USER,
+        'PASSWORD': DB_PASSWORD,
+        'HOST': DB_HOST,
+        'PORT': DB_PORT,
     }
 }
+
 
 INSTALLED_APPS = [
     'tenants',
@@ -185,21 +147,22 @@ SOCIALACCOUNT_QUERY_EMAIL = True
 SOCIALACCOUNT_AUTO_SIGNUP = True
 
 
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ),
-    'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticated',
-    ),
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 20,
-    'DEFAULT_FILTER_BACKENDS': [
-        'django_filters.rest_framework.DjangoFilterBackend',
-        'rest_framework.filters.SearchFilter',
-        'rest_framework.filters.OrderingFilter',
-    ],
-}
+# REST_FRAMEWORK = {
+#     'DEFAULT_AUTHENTICATION_CLASSES': (
+#         'rest_framework_simplejwt.authentication.JWTAuthentication',
+#     ),
+#     'DEFAULT_PERMISSION_CLASSES': (
+#         'rest_framework.permissions.IsAuthenticated',
+#     ),
+#     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+#     'PAGE_SIZE': 20,
+#     'DEFAULT_FILTER_BACKENDS': [
+#         'django_filters.rest_framework.DjangoFilterBackend',
+#         'rest_framework.filters.SearchFilter',
+#         'rest_framework.filters.OrderingFilter',
+#     ],
+#     'EXCEPTION_HANDLER': 'rest_framework.views.exception_handler',
+# }
 
 
 ROOT_URLCONF = 'core.urls'
@@ -277,7 +240,8 @@ SIMPLE_JWT = {
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
-DEFAULT_AUTO_FIELD = 'django_mongodb_backend.fields.ObjectIdAutoField'
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
 
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
@@ -295,12 +259,12 @@ if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Content Security Policy (CSP)
-CSP_DEFAULT_SRC = ("'self'", "http://localhost:3000", "http://localhost:8000")
-CSP_STYLE_SRC = ("'self'", "'unsafe-inline'", "https://fonts.googleapis.com")
-CSP_SCRIPT_SRC = ("'self'", "'unsafe-inline'", "'unsafe-eval'")
-CSP_IMG_SRC = ("'self'", "data:", "https:", "http:")
-CSP_FONT_SRC = ("'self'", "https://fonts.gstatic.com")
-CSP_CONNECT_SRC = ("'self'", "http://localhost:3000", "http://localhost:8000", "https://*.mongodb.net")
+# CSP_DEFAULT_SRC = ("'self'", "http://localhost:3000", "http://localhost:8000")
+# CSP_STYLE_SRC = ("'self'", "'unsafe-inline'", "https://fonts.googleapis.com")
+# CSP_SCRIPT_SRC = ("'self'", "'unsafe-inline'", "'unsafe-eval'")
+# CSP_IMG_SRC = ("'self'", "data:", "https:", "http:")
+# CSP_FONT_SRC = ("'self'", "https://fonts.gstatic.com")
+# CSP_CONNECT_SRC = ("'self'", "http://localhost:3000", "http://localhost:8000", "https://*.mongodb.net")
 
 # Brute Force Protection (Axes)
 AXES_FAILURE_LIMIT = 5

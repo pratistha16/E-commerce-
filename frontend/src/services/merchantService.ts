@@ -36,6 +36,17 @@ export const MerchantService = {
     const response = await api.patch(`/merchant/orders/${orderId}/update_status/`, { status });
     return response.data;
   },
+
+  async getProfile() {
+    const response = await api.get('/merchant/profile/settings/');
+    return response.data;
+  },
+
+  async updateProfile(profileData: any) {
+    const response = await api.patch('/merchant/profile/settings/', profileData);
+    return response.data;
+  },
 };
+
 
 export default MerchantService;

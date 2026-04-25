@@ -18,7 +18,15 @@ class VendorProfileViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get', 'patch'])
     def settings(self, request):
-        profile, created = VendorProfile.objects.get_or_create(user=request.user)
+        # Use unfiltered_objects to avoid tenant-filtering issues during profile retrieval
+        profile, created = VendorProfile.unfiltered_objects.get_or_create(user=request.user)
+
+        # Ensure profile is linked to the current tenant if it's not already
+        from core.tenant_context import get_tenant
+        tenant = get_tenant()
+        if tenant and (not profile.tenant_id or profile.tenant_id != str(tenant.id)):
+            profile.tenant_id = str(tenant.id)
+            profile.save()
 
         if request.method == 'PATCH':
             serializer = self.get_serializer(profile, data=request.data, partial=True)
@@ -29,6 +37,22 @@ class VendorProfileViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(profile)
         return Response(serializer.data)
+
+    @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny])
+    def public_details(self, request):
+        from core.tenant_context import get_tenant
+        tenant = get_tenant()
+        if not tenant:
+            return Response({'error': 'No tenant context found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Find the vendor profile associated with this tenant
+        profile = VendorProfile.unfiltered_objects.filter(tenant_id=str(tenant.id)).first()
+        if not profile:
+            return Response({'error': 'Vendor profile not found for this tenant'}, status=status.HTTP_404_NOT_FOUND)
+            
+        serializer = self.get_serializer(profile)
+        return Response(serializer.data)
+
 
 from orders.serializers import MerchantOrderSerializer
 
@@ -61,7 +85,6 @@ class MerchantProductViewSet(viewsets.ModelViewSet):
     permission_classes = (IsVendor,)
 
     def get_queryset(self):
-        # Only products belonging to the logged-in vendor
         try:
             vendor = VendorProfile.objects.get(user=self.request.user)
             return Product.objects.filter(vendor=vendor)
@@ -82,25 +105,21 @@ class MerchantProductViewSet(viewsets.ModelViewSet):
         except VendorProfile.DoesNotExist:
             return Response({'error': 'Vendor profile not found'}, status=status.HTTP_404_NOT_FOUND)
 
-        # Basic Stats
         total_products = Product.objects.filter(vendor=vendor).count()
         total_orders = Order.objects.filter(vendor=vendor).count()
         delivered_orders = Order.objects.filter(vendor=vendor, status='DELIVERED')
         total_revenue = delivered_orders.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
 
-        # Revenue Charts (Daily)
         daily_revenue = delivered_orders.annotate(day=TruncDay('created_at')) \
             .values('day') \
             .annotate(revenue=Sum('total_amount')) \
             .order_by('day')
 
-        # Revenue Charts (Monthly)
         monthly_revenue = delivered_orders.annotate(month=TruncMonth('created_at')) \
             .values('month') \
             .annotate(revenue=Sum('total_amount')) \
             .order_by('month')
 
-        # Top Selling Products
         from orders.models import OrderItem
         top_selling = OrderItem.objects.filter(order__vendor=vendor, order__status='DELIVERED') \
             .values('product__name') \

@@ -1,29 +1,26 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { MerchantService } from '@/services/merchantService';
 import { ProductService } from '@/services/productService';
 import { Category } from '@/types';
 import { 
-  Package, 
   ArrowLeft, 
-  Plus, 
+  Save, 
   Image as ImageIcon, 
-  Tag, 
   DollarSign, 
-  Inventory, 
   Type,
   CheckCircle2,
-  AlertCircle,
   Loader2,
-  Trash2
+  Plus
 } from 'lucide-react';
 import { Card, CardTitle, Button } from '@/components/ui';
 import { toast } from 'sonner';
-import { motion } from 'framer-motion';
 
-export default function MerchantAddProductPage() {
+export default function MerchantEditProductPage() {
+  const params = useParams();
+  const id = parseInt(params.id as string);
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
@@ -34,20 +31,42 @@ export default function MerchantAddProductPage() {
     is_available: true,
   });
   const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
-    const fetchCats = async () => {
+    const fetchData = async () => {
       try {
-        const data = await ProductService.getCategories();
-        setCategories(data);
+        const [cats, products] = await Promise.all([
+          ProductService.getCategories(),
+          MerchantService.getProducts()
+        ]);
+        setCategories(cats);
+        
+        const product = products.find((p: any) => p.id === id);
+        if (product) {
+          setFormData({
+            name: product.name,
+            slug: product.slug,
+            description: product.description,
+            price: product.price.toString(),
+            stock: product.stock.toString(),
+            category: product.category.id.toString(),
+            is_available: product.is_available,
+          });
+        } else {
+          toast.error('Product not found');
+          router.push('/merchant/dashboard/products');
+        }
       } catch (err) {
-        toast.error('Failed to load categories');
+        toast.error('Failed to load product data');
+      } finally {
+        setLoading(false);
       }
     };
-    fetchCats();
-  }, []);
+    fetchData();
+  }, [id]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -55,38 +74,34 @@ export default function MerchantAddProductPage() {
       ...formData,
       [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
     });
-    
-    // Auto-generate slug from name
-    if (name === 'name' && !formData.slug) {
-      setFormData(prev => ({
-        ...prev,
-        name: value,
-        slug: value.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '')
-      }));
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setSaving(true);
     try {
-      await MerchantService.createProduct({
+      await MerchantService.updateProduct(id, {
         ...formData,
         price: parseFloat(formData.price),
         stock: parseInt(formData.stock),
       });
-      toast.success('Product created successfully!');
+      toast.success('Product updated successfully!');
       router.push('/merchant/dashboard/products');
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Failed to add product. Ensure slug is unique.');
+      toast.error(err.response?.data?.error || 'Failed to update product');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+    </div>
+  );
+
   return (
     <div className="max-w-5xl mx-auto space-y-10 pb-20">
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex items-center gap-4">
           <button 
@@ -96,8 +111,8 @@ export default function MerchantAddProductPage() {
             <ArrowLeft size={20} />
           </button>
           <div>
-            <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase">Add New Product</h1>
-            <p className="text-sm font-bold text-slate-400 mt-1">Create a new item in your store catalog</p>
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase">Edit Product</h1>
+            <p className="text-sm font-bold text-slate-400 mt-1">Modify your product details and availability</p>
           </div>
         </div>
         <div className="flex items-center gap-4">
@@ -110,18 +125,17 @@ export default function MerchantAddProductPage() {
           </Button>
           <Button 
             onClick={handleSubmit}
-            disabled={loading}
+            disabled={saving}
             className="btn-primary !rounded-2xl !px-8 !h-14 text-xs font-black uppercase tracking-widest shadow-xl shadow-blue-500/20"
           >
-            {loading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Plus size={18} className="mr-2" />}
-            {loading ? 'Creating...' : 'Create Product'}
+            {saving ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Save size={18} className="mr-2" />}
+            {saving ? 'Saving...' : 'Save Changes'}
           </Button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
-          {/* Basic Information */}
           <Card className="p-8 border-none shadow-sm space-y-8">
             <div className="flex items-center gap-3 border-b border-slate-50 pb-6">
               <Type className="text-blue-600 w-5 h-5" />
@@ -137,7 +151,6 @@ export default function MerchantAddProductPage() {
                   className="w-full mt-2 pl-4 pr-4 py-4 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-blue-600/20 focus:bg-white transition-all outline-none font-medium text-slate-900"
                   value={formData.name}
                   onChange={handleChange}
-                  placeholder="e.g. Minimalist Ceramic Vessel"
                 />
               </div>
               
@@ -150,7 +163,6 @@ export default function MerchantAddProductPage() {
                     className="w-full mt-2 pl-4 pr-4 py-4 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-blue-600/20 focus:bg-white transition-all outline-none font-medium text-slate-900"
                     value={formData.slug}
                     onChange={handleChange}
-                    placeholder="minimalist-vessel"
                   />
                 </div>
                 <div>
@@ -179,13 +191,11 @@ export default function MerchantAddProductPage() {
                   className="w-full mt-2 pl-4 pr-4 py-4 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-blue-600/20 focus:bg-white transition-all outline-none font-medium text-slate-900"
                   value={formData.description}
                   onChange={handleChange}
-                  placeholder="Describe your product's story and features..."
                 />
               </div>
             </div>
           </Card>
 
-          {/* Media Upload */}
           <Card className="p-8 border-none shadow-sm space-y-8">
             <div className="flex items-center gap-3 border-b border-slate-50 pb-6">
               <ImageIcon className="text-blue-600 w-5 h-5" />
@@ -200,12 +210,10 @@ export default function MerchantAddProductPage() {
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Add Media</span>
               </div>
             </div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Recommended: 800x1000px, PNG or JPG (Max 5MB)</p>
           </Card>
         </div>
 
         <div className="space-y-8">
-          {/* Inventory & Pricing */}
           <Card className="p-8 border-none shadow-sm space-y-8">
             <div className="flex items-center gap-3 border-b border-slate-50 pb-6">
               <DollarSign className="text-blue-600 w-5 h-5" />
@@ -223,7 +231,6 @@ export default function MerchantAddProductPage() {
                   className="w-full mt-2 pl-4 pr-4 py-4 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-blue-600/20 focus:bg-white transition-all outline-none font-medium text-slate-900"
                   value={formData.price}
                   onChange={handleChange}
-                  placeholder="0.00"
                 />
               </div>
               
@@ -236,7 +243,6 @@ export default function MerchantAddProductPage() {
                   className="w-full mt-2 pl-4 pr-4 py-4 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-blue-600/20 focus:bg-white transition-all outline-none font-medium text-slate-900"
                   value={formData.stock}
                   onChange={handleChange}
-                  placeholder="0"
                 />
               </div>
 
@@ -251,17 +257,6 @@ export default function MerchantAddProductPage() {
               </div>
             </div>
           </Card>
-
-          {/* Visibility Info */}
-          <div className="bg-blue-600 rounded-3xl p-8 text-white space-y-4 shadow-xl shadow-blue-600/20">
-            <h4 className="text-lg font-black tracking-tight uppercase">Ready to sell?</h4>
-            <p className="text-xs font-medium text-blue-100 leading-relaxed">
-              Once created, your product will be instantly available on your store if 'Live Status' is active.
-            </p>
-            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-blue-200">
-              <CheckCircle2 size={16} /> Verified Storefront
-            </div>
-          </div>
         </div>
       </div>
     </div>

@@ -171,12 +171,13 @@ export default function MerchantProductsPage() {
                       >
                         <ExternalLink size={18} />
                       </Link>
-                      <button 
+                      <Link 
+                        href={`/merchant/dashboard/products/${product.id}/edit`}
                         className="p-2.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
                         title="Edit product"
                       >
                         <Edit2 size={18} />
-                      </button>
+                      </Link>
                       <button
                         onClick={() => handleDelete(product.id)}
                         className="p-2.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"

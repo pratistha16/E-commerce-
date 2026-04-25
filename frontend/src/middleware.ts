@@ -14,6 +14,12 @@ export function middleware(request: NextRequest) {
   if (isSubdomain) {
     const subdomain = hostname.split('.')[0];
     
+    // Rewrite root / to /storefront/[subdomain]
+    if (url.pathname === '/') {
+      url.pathname = `/storefront/${subdomain}`;
+      return NextResponse.rewrite(url);
+    }
+
     // Rewrite /dashboard to /merchant/dashboard
     if (url.pathname === '/dashboard') {
       url.pathname = '/merchant/dashboard';

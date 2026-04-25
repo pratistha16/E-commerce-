@@ -94,12 +94,13 @@ class ClientViewSet(viewsets.ModelViewSet):
             is_primary=True
         )
 
-        # 4. Create VendorProfile (linked to user)
+        # 4. Create VendorProfile (linked to user and tenant)
         from vendors.models import VendorProfile
         VendorProfile.objects.create(
             user=user,
             store_name=name,
-            contact_email=email
+            contact_email=email,
+            tenant_id=str(client.id)
         )
 
         log_admin_action(request, 'PROVISION_MERCHANT', 'Client', client.id, {'username': username, 'subdomain': subdomain})
