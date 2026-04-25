@@ -18,8 +18,18 @@ import {
   MoreHorizontal,
   Lock,
   Unlock,
-  ArrowUpRight
+  ArrowUpRight 
 } from 'lucide-react';
+import { toast } from 'sonner';
+import { 
+  DropdownMenu, 
+  DropdownMenuTrigger, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuLabel, 
+  DropdownMenuSeparator 
+} from '@/components/ui';
+import UserModal from '@/components/admin/UserModal';
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -28,6 +38,11 @@ export default function AdminUsersPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+
+  // Modal State
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [modalMode, setModalMode] = useState<'view' | 'edit' | 'create'>('view');
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -49,13 +64,35 @@ export default function AdminUsersPage() {
     }
   };
 
-  const handleToggleActive = async (id: number) => {
+  const handleToggleActive = async (id: string | number) => {
+    console.log('Toggling user active status for ID:', id);
     try {
-      await adminService.toggleUserActive(id);
+      const response = await adminService.toggleUserActive(id);
+      console.log('Toggle response:', response);
+      toast.success(response.status || 'User status updated successfully');
+      fetchData();
+    } catch (error: any) {
+      console.error('Failed to toggle user status', error);
+      toast.error(error.response?.data?.detail || 'Failed to update user status');
+    }
+  };
+
+  const handleDeleteUser = async (id: string | number) => {
+    if (!window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) return;
+    
+    try {
+      await adminService.deleteUser(id);
+      toast.success('User deleted successfully');
       fetchData();
     } catch (error) {
-      console.error('Failed to toggle user status', error);
+      toast.error('Failed to delete user');
     }
+  };
+
+  const openModal = (user: User | null, mode: 'view' | 'edit' | 'create') => {
+    setSelectedUser(user);
+    setModalMode(mode);
+    setIsModalOpen(true);
   };
 
   const getRoleIcon = (role: string) => {
@@ -89,7 +126,10 @@ export default function AdminUsersPage() {
           <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Users Management</h1>
           <p className="text-gray-500 font-medium">Control platform access and administrative roles.</p>
         </div>
-        <button className="flex items-center gap-2 px-6 py-3 bg-primary-600 text-white font-bold rounded-xl hover:bg-primary-700 shadow-md transition-all duration-200">
+        <button 
+          className="flex items-center gap-2 px-8 py-4 bg-slate-900 text-white font-black uppercase tracking-widest text-xs rounded-2xl hover:bg-indigo-600 shadow-xl shadow-slate-900/10 transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95"
+          onClick={() => openModal(null, 'create')}
+        >
           <UserPlus className="w-5 h-5" />
           Add Internal User
         </button>
@@ -98,9 +138,9 @@ export default function AdminUsersPage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {[
           { label: 'Total Users', value: stats?.total_users || 0, icon: Users, color: 'text-primary-600', bg: 'bg-primary-50' },
-          { label: 'Verified Merchants', value: stats?.total_vendors || 0, icon: Store, color: 'text-primary-600', bg: 'bg-primary-50' },
-          { label: 'Customers', value: stats?.total_customers || 0, icon: UserCircle, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-          { label: 'Active Sessions', value: stats?.active_users || 0, icon: Shield, color: 'text-rose-600', bg: 'bg-rose-50' },
+          { label: 'Verified Merchants', value: stats?.vendors || 0, icon: Store, color: 'text-primary-600', bg: 'bg-primary-50' },
+          { label: 'Customers', value: stats?.customers || 0, icon: UserCircle, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+          { label: 'Platform Admins', value: stats?.admins || 0, icon: Shield, color: 'text-rose-600', bg: 'bg-rose-50' },
         ].map((stat, i) => (
           <div key={i} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
             <div className={`p-3 rounded-xl ${stat.bg} ${stat.color}`}>
@@ -121,14 +161,14 @@ export default function AdminUsersPage() {
             <input
               type="text"
               placeholder="Search by name or email..."
-              className="w-full pl-12 pr-6 py-4 bg-white border-2 border-transparent rounded-2xl focus:border-indigo-500 focus:outline-none shadow-sm transition-all duration-200 font-medium text-sm"
+              className="w-full pl-12 pr-6 py-4 bg-white border-none rounded-2xl focus:ring-2 focus:ring-indigo-600/20 shadow-sm transition-all text-sm font-bold text-slate-900 placeholder:text-slate-400"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
           <div className="flex gap-3 w-full md:w-auto">
-            <button className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-4 bg-white border border-gray-200 text-gray-600 font-bold rounded-2xl hover:bg-gray-50 transition-colors">
-              <Filter className="w-5 h-5" />
+            <button className="flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-4 bg-white text-slate-900 font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-slate-50 transition-all shadow-sm border border-slate-100 active:scale-95">
+              <Filter className="w-4 h-4 text-indigo-600" />
               Advanced Filters
             </button>
           </div>
@@ -187,7 +227,7 @@ export default function AdminUsersPage() {
                     </div>
                   </td>
                   <td className="px-8 py-6 text-right">
-                    <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center justify-end gap-2 transition-opacity">
                       {user.role === 'VENDOR' && !user.is_active && (
                         <button 
                           onClick={() => handleToggleActive(user.id)}
@@ -207,9 +247,33 @@ export default function AdminUsersPage() {
                       >
                         {user.is_active ? <Lock className="w-5 h-5" /> : <Unlock className="w-5 h-5" />}
                       </button>
-                      <button className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
-                        <MoreHorizontal className="w-5 h-5" />
-                      </button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors outline-none">
+                            <MoreHorizontal className="w-5 h-5" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => openModal(user, 'view')}>
+                            <UserCircle className="mr-2 h-4 w-4" />
+                            View Profile
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openModal(user, 'edit')}>
+                            <BadgeCheck className="mr-2 h-4 w-4" />
+                            Edit User
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            className="text-rose-600 focus:bg-rose-50 focus:text-rose-600"
+                            onClick={() => handleDeleteUser(user.id)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete User
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </td>
                 </tr>
@@ -217,6 +281,15 @@ export default function AdminUsersPage() {
             </tbody>
           </table>
         </div>
+
+        {/* User Modal */}
+        <UserModal
+          user={selectedUser}
+          isOpen={isModalOpen}
+          mode={modalMode}
+          onClose={() => setIsModalOpen(false)}
+          onUpdate={fetchData}
+        />
 
         {/* Pagination */}
         {totalPages > 1 && (

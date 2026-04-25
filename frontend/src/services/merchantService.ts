@@ -28,13 +28,12 @@ export const MerchantService = {
   },
 
   async getOrders() {
-    // Already handled by OrderService but filtered for vendors
-    const response = await api.get<any>('/orders/');
+    const response = await api.get<any>('/merchant/orders/');
     return response.data.results || response.data;
   },
 
   async updateOrderStatus(orderId: number, status: string) {
-    const response = await api.post(`/orders/${orderId}/update_status/`, { status });
+    const response = await api.patch(`/merchant/orders/${orderId}/update_status/`, { status });
     return response.data;
   },
 };

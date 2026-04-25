@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import api from '@/lib/api';
-import { User, Mail, Phone, MapPin, Calendar, ShoppingBag, ShieldCheck, Camera, Heart, Settings, ArrowRight, Package, CreditCard, LogOut } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Calendar, ShoppingBag, ShieldCheck, Camera, Heart, Settings, ArrowRight, Package, CreditCard, LogOut, Truck } from 'lucide-react';
 import { OrderService } from '@/services/orderService';
 import { motion } from 'framer-motion';
 import RecommendedProducts from '@/components/RecommendedProducts';
@@ -90,7 +90,7 @@ export default function UserProfilePage() {
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Orders</p>
                   </div>
                   <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                    <p className="text-xl font-black text-slate-900">12</p>
+                    <p className="text-xl font-black text-slate-900">0</p>
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Wishlist</p>
                   </div>
                 </div>
@@ -178,7 +178,7 @@ export default function UserProfilePage() {
                       <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Member Since</label>
                       <div className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-900 flex items-center gap-3">
                         <Calendar size={18} className="text-slate-400" />
-                        <span>April 2026</span>
+                        <span>{new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
                       </div>
                     </div>
                   </div>

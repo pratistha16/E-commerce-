@@ -77,20 +77,25 @@ const chartData = [
 
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<SystemStats | null>(null);
+  const [pendingRequests, setPendingRequests] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchDashboardData = async () => {
       try {
-        const data = await adminService.getSystemAnalytics();
-        setStats(data);
+        const [statsData, pendingData] = await Promise.all([
+          adminService.getSystemAnalytics(),
+          adminService.getPendingTenants()
+        ]);
+        setStats(statsData);
+        setPendingRequests(pendingData);
       } catch (error) {
-        console.error('Failed to fetch analytics', error);
+        console.error('Failed to fetch dashboard data', error);
       } finally {
         setLoading(false);
       }
     };
-    fetchStats();
+    fetchDashboardData();
   }, []);
 
   if (loading) return (
@@ -166,7 +171,7 @@ export default function AdminDashboardPage() {
             
             <div className="h-[400px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData}>
+                <BarChart data={stats?.revenue_over_time && stats.revenue_over_time.length > 0 ? stats.revenue_over_time : chartData}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                   <XAxis 
                     dataKey="name" 
@@ -272,36 +277,47 @@ export default function AdminDashboardPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {[
-                { name: 'Vanguard Atelier', email: 'vanguard.admin@store.io', cat: 'HIGH-END FASHION', date: 'Oct 24, 2024', icon: 'V' },
-                { name: 'Nebula Electronics', email: 'contact@nebula.tech', cat: 'CONSUMER TECH', date: 'Oct 23, 2024', icon: 'N' },
-                { name: 'Curated Crafts', email: 'orders@curated.com', cat: 'HANDMADE GOODS', date: 'Oct 22, 2024', icon: 'C' }
-              ].map((item, i) => (
-                <tr key={i} className="group hover:bg-slate-50 transition-colors">
-                  <td className="py-6">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-900 font-black text-xs">
-                        {item.icon}
+              {pendingRequests.length > 0 ? (
+                pendingRequests.map((item) => (
+                  <tr key={item.id} className="group hover:bg-slate-50 transition-colors">
+                    <td className="py-6">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-900 font-black text-xs">
+                          {item.name[0].toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="text-sm font-black text-slate-900 leading-none mb-1">{item.name}</p>
+                          <p className="text-xs font-bold text-slate-400">{item.schema_name}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-black text-slate-900 leading-none mb-1">{item.name}</p>
-                        <p className="text-xs font-bold text-slate-400">{item.email}</p>
+                    </td>
+                    <td className="py-6">
+                      <span className="text-[10px] font-black text-slate-500 bg-slate-50 px-3 py-1 rounded-lg border border-slate-100">
+                        PENDING APPROVAL
+                      </span>
+                    </td>
+                    <td className="py-6 text-sm font-bold text-slate-400">
+                      {new Date(item.created_on).toLocaleDateString()}
+                    </td>
+                    <td className="py-6 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Link href="/admin/tenants" className="p-2 text-slate-400 hover:text-slate-900 transition-all">
+                          <ChevronRight size={18} />
+                        </Link>
                       </div>
-                    </div>
-                  </td>
-                  <td className="py-6">
-                    <span className="text-[10px] font-black text-slate-500 bg-slate-50 px-3 py-1 rounded-lg border border-slate-100">
-                      {item.cat}
-                    </span>
-                  </td>
-                  <td className="py-6 text-sm font-bold text-slate-400">{item.date}</td>
-                  <td className="py-6 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button className="p-2 text-slate-400 hover:text-slate-900 transition-all"><ChevronRight size={18} /></button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={4} className="py-10 text-center">
+                    <div className="flex flex-col items-center gap-2">
+                      <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+                      <p className="text-sm font-bold text-slate-500">All caught up! No pending requests.</p>
                     </div>
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>

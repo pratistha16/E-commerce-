@@ -77,6 +77,18 @@ class UserManagementViewSet(viewsets.ModelViewSet):
         log_admin_action(request, 'TOGGLE_USER_STATUS', 'User', user.id, {'status': status_msg})
         return Response({'status': f'User {status_msg}', 'is_active': user.is_active})
 
+    @action(detail=True, methods=['post'])
+    def reset_password(self, request, pk=None):
+        user = self.get_object()
+        new_password = request.data.get('password')
+        if not new_password:
+            return Response({'error': 'Password is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        user.set_password(new_password)
+        user.save()
+        log_admin_action(request, 'RESET_PASSWORD', 'User', user.id, {'username': user.username})
+        return Response({'status': 'Password reset successfully'})
+
     def perform_destroy(self, instance):
         user_id = instance.id
         user_name = instance.username

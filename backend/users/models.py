@@ -25,6 +25,11 @@ class User(AbstractUser):
     def __str__(self):
         return f"{self.username} ({self.role})"
 
+    def __hash__(self):
+        if self.pk is None:
+            return hash(id(self))
+        return hash(self.pk)
+
 class Notification(models.Model):
     TYPES = (
         ('ORDER_UPDATE', 'Order Update'),

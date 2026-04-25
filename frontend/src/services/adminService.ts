@@ -1,12 +1,14 @@
 import api from '@/lib/api';
 
 export interface Tenant {
-  id: number;
+  id: string | number;
   schema_name: string;
   name: string;
   created_on: string;
+  is_approved: boolean;
+  is_active: boolean;
   domains: {
-    id: number;
+    id: string | number;
     domain: string;
     is_primary: boolean;
   }[];
@@ -17,8 +19,13 @@ export interface SystemStats {
   total_users: number;
   total_orders: number;
   total_revenue: number;
+  pending_tenants: number;
   top_tenants: {
-    vendor__store_name: string;
+    tenant_name: string;
+    revenue: number;
+  }[];
+  revenue_over_time: {
+    month: string;
     revenue: number;
   }[];
 }
@@ -48,12 +55,22 @@ export const adminService = {
     return response.data;
   },
   
+  getPendingTenants: async () => {
+    const response = await api.get<PaginatedResponse<Tenant>>('/tenants/clients/?is_approved=false');
+    return response.data.results;
+  },
+  
   createTenant: async (data: { name: string; schema_name: string; domain_name: string }) => {
     const response = await api.post<Tenant>('/tenants/clients/', data);
     return response.data;
   },
+
+  provisionMerchant: async (data: any) => {
+    const response = await api.post('/tenants/clients/provision/', data);
+    return response.data;
+  },
   
-  deleteTenant: async (id: number) => {
+  deleteTenant: async (id: string | number) => {
     await api.delete(`/tenants/clients/${id}/`);
   },
   
@@ -78,17 +95,27 @@ export const adminService = {
     return response.data;
   },
   
-  updateUser: async (id: number, data: any) => {
+  updateUser: async (id: string | number, data: any) => {
     const response = await api.patch(`/auth/management/${id}/`, data);
     return response.data;
   },
   
-  toggleUserActive: async (id: number) => {
+  toggleUserActive: async (id: string | number) => {
     const response = await api.post(`/auth/management/${id}/toggle_active/`);
     return response.data;
   },
+
+  resetUserPassword: async (id: string | number, password: string) => {
+    const response = await api.post(`/auth/management/${id}/reset_password/`, { password });
+    return response.data;
+  },
   
-  deleteUser: async (id: number) => {
+  createUser: async (data: any) => {
+    const response = await api.post('/auth/management/', data);
+    return response.data;
+  },
+
+  deleteUser: async (id: string | number) => {
     await api.delete(`/auth/management/${id}/`);
   },
   
@@ -114,7 +141,7 @@ export const adminService = {
 };
 
 export interface GlobalSettings {
-  id: number;
+  id: string | number;
   commission_percentage: number;
   global_tax_percentage: number;
   default_shipping_fee: number;

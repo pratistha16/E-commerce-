@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import api from '@/lib/api';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Mail, Lock, Chrome, Github, ArrowRight, Loader2, AlertCircle, CheckCircle2, ChevronRight, ShieldCheck, Zap } from 'lucide-react';
+import { Mail, Lock, Chrome, Github, ArrowRight, Loader2, AlertCircle, CheckCircle2, ChevronRight, ShieldCheck, Zap, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { toast } from 'sonner';
 
@@ -16,6 +16,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -35,10 +36,17 @@ export default function LoginPage() {
       const user = await login(response.data.access, response.data.refresh);
       
       if (user) {
+        const isSubdomain = window.location.hostname.split('.').length > 2 && !window.location.hostname.includes('localhost') || 
+                          (window.location.hostname.includes('localhost') && window.location.hostname.split('.').length > 1 && window.location.hostname !== 'localhost');
+        
         if (user.role === 'ADMIN') {
           router.push('/admin/dashboard');
         } else if (user.role === 'VENDOR') {
-          router.push('/merchant/dashboard');
+          if (isSubdomain) {
+            router.push('/dashboard');
+          } else {
+            router.push('/merchant/dashboard');
+          }
         } else {
           router.push('/profile');
         }
@@ -167,13 +175,20 @@ export default function LoginPage() {
               <div className="relative group">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" size={18} />
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   required
                   placeholder="••••••••"
-                  className="w-full pl-12 pr-4 py-4 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-blue-600/20 focus:bg-white transition-all outline-none font-medium text-slate-900"
+                  className="w-full pl-12 pr-12 py-4 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-blue-600/20 focus:bg-white transition-all outline-none font-medium text-slate-900"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors focus:outline-none"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
               </div>
             </div>
 

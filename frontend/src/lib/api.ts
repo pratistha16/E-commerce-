@@ -1,7 +1,21 @@
 import axios from 'axios';
 
+const getBaseURL = () => {
+  if (typeof window === 'undefined') {
+    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+  }
+  
+  const hostname = window.location.hostname;
+  // If we are on a subdomain (e.g., store1.localhost), point API to the same subdomain
+  if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+    return `http://${hostname}:8000/api`;
+  }
+  
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+};
+
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api',
+  baseURL: getBaseURL(),
   headers: {
     'Content-Type': 'application/json',
   },

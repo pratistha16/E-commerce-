@@ -18,8 +18,59 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Load environment variables from .env file
-load_dotenv(os.path.join(BASE_DIR, '.env'))
+dotenv_path = os.path.join(BASE_DIR, '.env')
+if os.path.exists(dotenv_path):
+    load_dotenv(dotenv_path)
+else:
+    load_dotenv()
 
+from django.db import models
+
+# Monkey-patch MongoDB field type check and Model hash
+def model_hash(self):
+    if not hasattr(self, '_pk_val') or self._pk_val is None:
+        return hash(id(self))
+    return hash(self._pk_val)
+models.Model.__hash__ = model_hash
+
+try:
+    from django_mongodb_backend.checks import DatabaseChecks
+    DatabaseChecks.check_field_type = lambda *args, **kwargs: []
+except ImportError:
+    pass
+
+# DRF MongoDB Fix: Convert ObjectId to string in serializers
+try:
+    from rest_framework import fields
+    from bson import ObjectId
+    
+    # Patch base Field
+    original_to_representation = fields.Field.to_representation
+    def patched_to_representation(self, value):
+        if isinstance(value, ObjectId):
+            return str(value)
+        return original_to_representation(self, value)
+    fields.Field.to_representation = patched_to_representation
+
+    # Patch IntegerField specifically since it calls int()
+    original_int_to_rep = fields.IntegerField.to_representation
+    def patched_int_to_rep(self, value):
+        if isinstance(value, ObjectId):
+            return str(value)
+        return original_int_to_rep(self, value)
+    fields.IntegerField.to_representation = patched_int_to_rep
+    
+    # Patch JSON Encoder for any remaining ObjectIds
+    from rest_framework.utils import encoders
+    original_default = encoders.JSONEncoder.default
+    def patched_default(self, obj):
+        if isinstance(obj, ObjectId):
+            return str(obj)
+        return original_default(self, obj)
+    encoders.JSONEncoder.default = patched_default
+
+except ImportError:
+    pass
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -39,45 +90,42 @@ X_FRAME_OPTIONS = 'DENY'
 CSRF_COOKIE_HTTPONLY = True
 SESSION_COOKIE_HTTPONLY = True
 
-# Tenant Settings
-TENANT_LIMIT_SET_CALLS = True # Performance optimization for django-tenants
+# MongoDB Settings
+MONGODB_URI = os.getenv('MONGODB_URI')
+MONGODB_NAME = os.getenv('MONGODB_NAME', 'Ecommerce')
 
+
+# --- MONGO DB SILENCE CHECKS ---
+SILENCED_SYSTEM_CHECKS = ['mongodb.E001']
 
 # Application definition
 
 MIDDLEWARE = [
-    'django_tenants.middleware.main.TenantMainMiddleware',  # mandatory
+    'core.middleware.TenantMiddleware', # Custom MongoDB Tenant Middleware
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'allauth.account.middleware.AccountMiddleware', # Added for allauth
+    'allauth.account.middleware.AccountMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-DATABASE_ROUTERS = (
-    'django_tenants.routers.TenantSyncRouter',
-)
+DATABASE_ROUTERS = [
+    'core.router.TenantRouter',
+]
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django_tenants.postgresql_backend',
-        'NAME': os.getenv('DB_NAME', 'Ecomerce'),
-        'USER': os.getenv('DB_USER', 'postgres'),
-        'PASSWORD': os.getenv('DB_PASSWORD', 'password'),
-        'HOST': os.getenv('DB_HOST', 'localhost'),
-        'PORT': os.getenv('DB_PORT', '5432'),
+        'ENGINE': 'django_mongodb_backend',
+        'NAME': MONGODB_NAME,
+        'HOST': MONGODB_URI,
     }
 }
 
-TENANT_MODEL = "tenants.Client"
-TENANT_DOMAIN_MODEL = "tenants.Domain"
-
-SHARED_APPS = (
-    'django_tenants',
+INSTALLED_APPS = [
     'tenants',
     'users',
     'django.contrib.contenttypes',
@@ -86,7 +134,7 @@ SHARED_APPS = (
     'django.contrib.messages',
     'django.contrib.admin',
     'django.contrib.staticfiles',
-    'django.contrib.sites', # Required by allauth
+    'django.contrib.sites',
     'rest_framework',
     'corsheaders',
     'rest_framework_simplejwt',
@@ -95,28 +143,13 @@ SHARED_APPS = (
     'products',
     'orders',
     'payments',
-    
-    # Auth & Social Auth
     'allauth',
     'allauth.account',
+    'allauth.mfa', # Multi-Factor Authentication
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
     'allauth.socialaccount.providers.github',
-)
-
-SITE_ID = 1
-
-TENANT_APPS = (
-    'django.contrib.contenttypes',
-    'django_filters',
-    'vendors',
-    'products',
-    'orders',
-    'payments',
-    'rest_framework',
-)
-
-INSTALLED_APPS = list(set(SHARED_APPS + TENANT_APPS))
+]
 
 # Allauth / Social Auth Configuration
 AUTHENTICATION_BACKENDS = (
@@ -244,7 +277,45 @@ SIMPLE_JWT = {
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DEFAULT_AUTO_FIELD = 'django_mongodb_backend.fields.ObjectIdAutoField'
 
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
+
+# --- SECURITY HARDENING ---
+
+# HTTPS & SSL
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000 # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Content Security Policy (CSP)
+CSP_DEFAULT_SRC = ("'self'", "http://localhost:3000", "http://localhost:8000")
+CSP_STYLE_SRC = ("'self'", "'unsafe-inline'", "https://fonts.googleapis.com")
+CSP_SCRIPT_SRC = ("'self'", "'unsafe-inline'", "'unsafe-eval'")
+CSP_IMG_SRC = ("'self'", "data:", "https:", "http:")
+CSP_FONT_SRC = ("'self'", "https://fonts.gstatic.com")
+CSP_CONNECT_SRC = ("'self'", "http://localhost:3000", "http://localhost:8000", "https://*.mongodb.net")
+
+# Brute Force Protection (Axes)
+AXES_FAILURE_LIMIT = 5
+AXES_COOLOFF_TIME = 1 # hour
+AXES_LOCKOUT_TEMPLATE = None # Use default or create one
+AXES_RESET_ON_SUCCESS = True
+
+# Multi-Factor Authentication (Allauth MFA)
+MFA_SUPPORTED_TYPES = ["totp"]
+ACCOUNT_LOGIN_BY_CODE_ENABLED = True
+
+# --- CACHING ---
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+    }
+}

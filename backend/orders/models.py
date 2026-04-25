@@ -3,8 +3,9 @@ from django.db import models
 from django.conf import settings
 from products.models import Product
 from vendors.models import VendorProfile
+from core.models import TenantAwareModel
 
-class Cart(models.Model):
+class Cart(TenantAwareModel):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='cart')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -28,7 +29,7 @@ class CartItem(models.Model):
     def total_price(self):
         return self.quantity * self.product.price
 
-class Order(models.Model):
+class Order(TenantAwareModel):
     STATUS_CHOICES = (
         ('PENDING', 'Pending'),
         ('CONFIRMED', 'Confirmed'),

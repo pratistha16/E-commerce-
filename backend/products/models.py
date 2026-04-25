@@ -1,8 +1,9 @@
 from django.db import models
 from django.conf import settings
 from vendors.models import VendorProfile
+from core.models import TenantAwareModel
 
-class Category(models.Model):
+class Category(TenantAwareModel):
     name = models.CharField(max_length=100)
     slug = models.SlugField(unique=True, max_length=255)
     description = models.TextField(blank=True, null=True)
@@ -30,7 +31,7 @@ class Tag(models.Model):
     def __str__(self):
         return self.name
 
-class Product(models.Model):
+class Product(TenantAwareModel):
     vendor = models.ForeignKey(VendorProfile, on_delete=models.CASCADE, related_name='products')
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='products')
     brand = models.ForeignKey(Brand, on_delete=models.SET_NULL, null=True, blank=True, related_name='products')

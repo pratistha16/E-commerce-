@@ -1,7 +1,7 @@
 export type Role = 'ADMIN' | 'VENDOR' | 'CUSTOMER';
 
 export interface User {
-  id: number;
+  id: string | number;
   username: string;
   email: string;
   role: Role;
@@ -10,27 +10,27 @@ export interface User {
 }
 
 export interface Category {
-  id: number;
+  id: string | number;
   name: string;
   slug: string;
   parent?: number;
 }
 
 export interface Product {
-  id: number;
+  id: string | number;
   name: string;
   slug: string;
   price: number;
   stock: number;
   is_available: boolean;
   vendor: {
-    id: number;
+    id: string | number;
     store_name: string;
     logo?: string;
   };
   category: Category;
   images: {
-    id: number;
+    id: string | number;
     image: string;
     is_primary: boolean;
   }[];
@@ -38,27 +38,27 @@ export interface Product {
 }
 
 export interface CartItem {
-  id: number;
+  id: string | number;
   product: Product;
   quantity: number;
   total_price: number;
 }
 
 export interface Cart {
-  id: number;
+  id: string | number;
   user: number;
   items: CartItem[];
   total_price: number;
 }
 
 export interface Order {
-  id: number;
+  id: string | number;
   vendor: number;
   total_amount: number;
   status: 'PENDING' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
   shipping_address: string;
   items: {
-    id: number;
+    id: string | number;
     product: Product;
     quantity: number;
     price: number;
@@ -67,7 +67,7 @@ export interface Order {
 }
 
 export interface Notification {
-  id: number;
+  id: string | number;
   title: string;
   message: string;
   notification_type: 'ORDER_UPDATE' | 'PROMOTION' | 'SYSTEM';

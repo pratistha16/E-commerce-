@@ -34,7 +34,7 @@ export default function MerchantDashboard() {
       try {
         const [analyticsData, ordersData, productsData] = await Promise.all([
           MerchantService.getAnalytics(),
-          api.get('/merchant/orders/').then(res => res.data.results || res.data),
+          MerchantService.getOrders(),
           MerchantService.getProducts()
         ]);
         
@@ -98,7 +98,7 @@ export default function MerchantDashboard() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase">Store Dashboard</h1>
-          <p className="text-sm font-bold text-slate-400 mt-1">Welcome back, Architect Commerce</p>
+          <p className="text-sm font-bold text-slate-400 mt-1">Welcome back to your merchant control center</p>
         </div>
         <div className="flex items-center gap-4">
           <div className="bg-white border border-slate-100 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 flex items-center gap-2 shadow-sm">
@@ -115,7 +115,7 @@ export default function MerchantDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard 
           label="Total Sales" 
-          value={`$${analytics?.total_revenue?.toLocaleString() || '45,231.89'}`} 
+          value={`$${analytics?.stats?.total_revenue?.toLocaleString() || '0'}`} 
           trend="+12.5%" 
           isUp={true} 
           icon={DollarSign} 
@@ -124,8 +124,8 @@ export default function MerchantDashboard() {
         />
         <StatCard 
           label="Active Orders" 
-          value={analytics?.total_orders || '142'} 
-          trend="8 Pending" 
+          value={analytics?.stats?.total_orders || '0'} 
+          trend="Real-time" 
           isUp={true} 
           icon={ShoppingBag} 
           color="bg-blue-600" 
@@ -133,8 +133,8 @@ export default function MerchantDashboard() {
         />
         <StatCard 
           label="Top Product" 
-          value="Bauhaus Side Table" 
-          trend="Customer Growth" 
+          value={analytics?.top_selling?.[0]?.product__name || 'N/A'} 
+          trend={analytics?.top_selling?.[0]?.total_sold ? `${analytics.top_selling[0].total_sold} Sold` : 'No Sales'} 
           isUp={true} 
           icon={Package} 
           color="bg-slate-900" 
@@ -172,25 +172,35 @@ export default function MerchantDashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {[1, 2, 3, 4].map((i) => (
-                    <tr key={i} className="group hover:bg-slate-50 transition-colors">
-                      <td className="py-5 text-xs font-bold text-slate-400">#ORD-829{i}</td>
-                      <td className="py-5 text-sm font-black text-slate-900">
-                        {['Elena Rodriguez', 'Marcus Chen', 'Sophie Vane', 'Julian Blake'][i-1]}
-                      </td>
-                      <td className="py-5 text-sm font-bold text-slate-500">
-                        {['Brutalist Lamp', 'Glass Vessel V2', 'Oak Frame Set', 'Bauhaus Side Table'][i-1]}
-                      </td>
-                      <td className="py-5 text-sm font-black text-slate-900">$245.00</td>
-                      <td className="py-5">
-                        <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${
-                          i === 1 ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'
-                        }`}>
-                          {i === 1 ? 'Delivered' : 'Processing'}
-                        </span>
+                  {orders.length > 0 ? (
+                    orders.map((order) => (
+                      <tr key={order.id} className="group hover:bg-slate-50 transition-colors">
+                        <td className="py-5 text-xs font-bold text-slate-400">#{order.order_number || order.id}</td>
+                        <td className="py-5 text-sm font-black text-slate-900">
+                          {order.user_email || 'Guest Customer'}
+                        </td>
+                        <td className="py-5 text-sm font-bold text-slate-500">
+                          {order.items?.length || 0} Items
+                        </td>
+                        <td className="py-5 text-sm font-black text-slate-900">${order.total_amount}</td>
+                        <td className="py-5">
+                          <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${
+                            order.status === 'DELIVERED' ? 'bg-emerald-50 text-emerald-600' : 
+                            order.status === 'PENDING' ? 'bg-amber-50 text-amber-600' :
+                            'bg-blue-50 text-blue-600'
+                          }`}>
+                            {order.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="py-10 text-center text-slate-400 font-bold uppercase tracking-widest text-xs">
+                        No orders found
                       </td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
             </div>

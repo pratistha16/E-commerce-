@@ -1,6 +1,5 @@
 import os
 import django
-from django.db import connection
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
@@ -11,7 +10,7 @@ from products.models import Category, Product
 from users.models import User
 
 def seed_tenant():
-    # 0. Create Public Tenant
+    # 0. Create Public Tenant record
     public_tenant, created = Client.objects.get_or_create(
         schema_name='public', 
         name='Public Schema'
@@ -22,14 +21,14 @@ def seed_tenant():
             tenant=public_tenant, 
             is_primary=True
         )
-        print("Public tenant created.")
+        print("Public tenant record created.")
 
-    # 0.5 Create Superuser in public schema
-    if not User.objects.filter(username='admin').exists():
-        User.objects.create_superuser('admin', 'admin@example.com', 'admin123', role='ADMIN')
+    # 0.5 Create Superuser
+    if not User.objects.filter(username='prath').exists():
+        User.objects.create_superuser('prath', 'admin@example.com', 'p@123', role='ADMIN')
         print("Superuser created.")
 
-    # 1. Create Tenant
+    # 1. Create Tenant record
     tenant, created = Client.objects.get_or_create(
         schema_name='electronics', 
         name='Electronics Hub'
@@ -40,12 +39,9 @@ def seed_tenant():
             tenant=tenant, 
             is_primary=True
         )
-        print(f"Tenant 'electronics' created.")
+        print(f"Tenant record 'electronics' created.")
     
-    # 2. Switch to Tenant
-    connection.set_tenant(tenant)
-    
-    # 3. Seed Data inside Tenant
+    # 3. Seed Data (Shared database for now)
     vendor_user, created = User.objects.get_or_create(
         username='vendor1', 
         defaults={'email':'vendor1@example.com', 'role':'VENDOR'}
@@ -69,7 +65,7 @@ def seed_tenant():
         slug='macbook-pro-16', 
         defaults={'description': 'Powerful laptop.', 'price': 2499.99, 'stock': 10}
     )
-    print(f"Seed data created for tenant 'electronics'. Product: {product.name}")
+    print(f"Seed data created. Product: {product.name}")
 
 if __name__ == "__main__":
     seed_tenant()

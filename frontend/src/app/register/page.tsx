@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { User, Mail, Lock, Chrome, Github, ArrowRight, Loader2, AlertCircle, ShoppingBag, Store, ChevronRight, ShieldCheck, Globe, Zap } from 'lucide-react';
+import { User, Mail, Lock, Chrome, Github, ArrowRight, Loader2, AlertCircle, ShoppingBag, Store, ChevronRight, ShieldCheck, Globe, Zap, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui';
 
 export default function RegisterPage() {
@@ -13,11 +13,12 @@ export default function RegisterPage() {
     username: '',
     email: '',
     password: '',
-    role: 'CUSTOMER' as 'CUSTOMER' | 'VENDOR',
+    role: 'CUSTOMER' as const,
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -149,32 +150,9 @@ export default function RegisterPage() {
           ) : (
             <form className="space-y-6" onSubmit={handleSubmit}>
               <div className="space-y-3">
-                <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Account Type</label>
-                <div className="grid grid-cols-2 gap-4">
-                  <button
-                    type="button"
-                    onClick={() => handleRoleSelect('CUSTOMER')}
-                    className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition-all duration-300 ${
-                      formData.role === 'CUSTOMER' 
-                      ? 'border-blue-600 bg-blue-50 text-blue-600 shadow-sm' 
-                      : 'border-slate-100 bg-slate-50 text-slate-400 hover:border-slate-200'
-                    }`}
-                  >
-                    <ShoppingBag size={20} className={formData.role === 'CUSTOMER' ? 'text-blue-600' : 'text-slate-400'} />
-                    <span className="text-sm font-black uppercase tracking-widest">Customer</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleRoleSelect('VENDOR')}
-                    className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition-all duration-300 ${
-                      formData.role === 'VENDOR' 
-                      ? 'border-blue-600 bg-blue-50 text-blue-600 shadow-sm' 
-                      : 'border-slate-100 bg-slate-50 text-slate-400 hover:border-slate-200'
-                    }`}
-                  >
-                    <Store size={20} className={formData.role === 'VENDOR' ? 'text-blue-600' : 'text-slate-400'} />
-                    <span className="text-sm font-black uppercase tracking-widest">Merchant</span>
-                  </button>
+                <div className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-blue-50 border border-blue-100 text-blue-600">
+                  <ShoppingBag size={18} />
+                  <span className="text-[10px] font-black uppercase tracking-widest">Customer Registration</span>
                 </div>
               </div>
 
@@ -216,13 +194,20 @@ export default function RegisterPage() {
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" size={18} />
                   <input
                     name="password"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     required
                     placeholder="Minimum 8 characters"
-                    className="w-full pl-12 pr-4 py-4 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-blue-600/20 focus:bg-white transition-all outline-none font-medium text-slate-900"
+                    className="w-full pl-12 pr-12 py-4 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-blue-600/20 focus:bg-white transition-all outline-none font-medium text-slate-900"
                     value={formData.password}
                     onChange={handleChange}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors focus:outline-none"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
                 </div>
               </div>
 
