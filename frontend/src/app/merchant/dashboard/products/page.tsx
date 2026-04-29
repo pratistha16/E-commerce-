@@ -20,6 +20,14 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui';
 
+// Helper to get absolute image URL
+const getFullImageUrl = (url: string) => {
+  if (!url) return null;
+  if (url.startsWith('http')) return url;
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:8000';
+  return `${baseUrl}${url}`;
+};
+
 export default function MerchantProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -126,7 +134,7 @@ export default function MerchantProductsPage() {
                     <div className="flex items-center gap-5">
                       <div className="h-16 w-16 bg-slate-100 rounded-2xl overflow-hidden border border-slate-100 flex-shrink-0">
                         <img 
-                          src={product.images?.[0]?.image || 'https://via.placeholder.com/100'} 
+                          src={getFullImageUrl(product.images?.[0]?.image) || 'https://via.placeholder.com/100'} 
                           alt={product.name} 
                           className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-500" 
                         />

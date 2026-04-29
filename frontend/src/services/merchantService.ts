@@ -27,6 +27,17 @@ export const MerchantService = {
     return response.data;
   },
 
+  async uploadProductImage(productId: number, imageFile: File) {
+    const formData = new FormData();
+    formData.append('image', imageFile);
+    const response = await api.post(`/merchant/products/${productId}/upload-image/`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
   async getOrders() {
     const response = await api.get<any>('/merchant/orders/');
     return response.data.results || response.data;

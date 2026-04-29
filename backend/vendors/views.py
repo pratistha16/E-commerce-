@@ -1,3 +1,4 @@
+import os
 from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
@@ -16,8 +17,8 @@ class VendorProfileViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return VendorProfile.objects.filter(user=self.request.user)
 
-    @action(detail=False, methods=['get', 'patch'])
-    def settings(self, request):
+    @action(detail=False, methods=['get', 'patch'], url_path='settings')
+    def profile_settings(self, request):
         # Use unfiltered_objects to avoid tenant-filtering issues during profile retrieval
         profile, created = VendorProfile.unfiltered_objects.get_or_create(user=request.user)
 
@@ -92,11 +93,41 @@ class MerchantProductViewSet(viewsets.ModelViewSet):
             return Product.objects.none()
 
     def perform_create(self, serializer):
-        try:
-            vendor, _ = VendorProfile.objects.get_or_create(user=self.request.user)
-            serializer.save(vendor=vendor)
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        vendor, _ = VendorProfile.objects.get_or_create(user=self.request.user)
+        serializer.save(vendor=vendor)
+
+    @action(detail=True, methods=['post'], url_path='upload-image')
+    def upload_image(self, request, pk=None):
+        product = self.get_object()
+        image_file = request.FILES.get('image')
+        
+        print(f"DEBUG: Received image upload request for product {product.id}")
+        if not image_file:
+            print("DEBUG: No image file in request.FILES")
+            return Response({'error': 'No image provided'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        print(f"DEBUG: Image file name: {image_file.name}, size: {image_file.size}")
+        
+        # Ensure media directory exists
+        from django.conf import settings
+        media_path = os.path.join(settings.MEDIA_ROOT, 'products')
+        if not os.path.exists(media_path):
+            os.makedirs(media_path, exist_ok=True)
+            print(f"DEBUG: Created directory {media_path}")
+
+        from products.models import ProductImage
+        is_primary = not product.images.exists()
+        
+        img_obj = ProductImage(
+            product=product,
+            is_primary=is_primary
+        )
+        # Explicitly save the file to ensure it's written to MEDIA_ROOT
+        img_obj.image.save(image_file.name, image_file, save=True)
+        
+        print(f"DEBUG: Created ProductImage object {img_obj.id}, path: {img_obj.image.path}")
+        
+        return Response({'status': 'Image uploaded successfully', 'id': img_obj.id}, status=status.HTTP_201_CREATED)
 
     @action(detail=False, methods=['get'])
     def analytics(self, request):

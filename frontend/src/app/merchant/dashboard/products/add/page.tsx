@@ -29,13 +29,19 @@ export default function MerchantAddProductPage() {
     slug: '',
     description: '',
     price: '',
+    discount_price: '',
     stock: '',
     category: '',
     is_available: true,
   });
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  // Stable unique suffix for the duration of this add session to keep slugs unique but stable while typing
+  const [sessionSuffix] = useState(() => Math.random().toString(36).substring(2, 8));
 
   useEffect(() => {
     const fetchCats = async () => {
@@ -49,20 +55,46 @@ export default function MerchantAddProductPage() {
     fetchCats();
   }, []);
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (selectedImages.length + files.length > 6) {
+      toast.error('You can only upload up to 6 images.');
+      return;
+    }
+
+    const newImages = [...selectedImages, ...files];
+    setSelectedImages(newImages);
+
+    const newPreviews = files.map(file => URL.createObjectURL(file));
+    setImagePreviews([...imagePreviews, ...newPreviews]);
+  };
+
+  const removeImage = (index: number) => {
+    const newImages = [...selectedImages];
+    newImages.splice(index, 1);
+    setSelectedImages(newImages);
+
+    const newPreviews = [...imagePreviews];
+    URL.revokeObjectURL(newPreviews[index]);
+    newPreviews.splice(index, 1);
+    setImagePreviews(newPreviews);
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
-    setFormData({
-      ...formData,
-      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
-    });
     
-    // Auto-generate slug from name
-    if (name === 'name' && !formData.slug) {
+    if (name === 'name') {
+      const baseSlug = value.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '');
       setFormData(prev => ({
         ...prev,
         name: value,
-        slug: value.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '')
+        slug: value ? `${baseSlug}-${sessionSuffix}` : ''
       }));
+    } else {
+      setFormData({
+        ...formData,
+        [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
+      });
     }
   };
 
@@ -70,12 +102,26 @@ export default function MerchantAddProductPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      await MerchantService.createProduct({
-        ...formData,
+      // In a real scenario, you'd use FormData to send files along with other fields
+      // For now, we'll follow the existing JSON structure but log the images
+      const { category, ...rest } = formData;
+      const product = await MerchantService.createProduct({
+        ...rest,
+        category_id: category,
         price: parseFloat(formData.price),
+        discount_price: formData.discount_price ? parseFloat(formData.discount_price) : null,
         stock: parseInt(formData.stock),
       });
-      toast.success('Product created successfully!');
+
+      // Upload images if any are selected
+      if (selectedImages.length > 0) {
+        toast.info(`Uploading ${selectedImages.length} images...`);
+        await Promise.all(
+          selectedImages.map(img => MerchantService.uploadProductImage(product.id, img))
+        );
+      }
+
+      toast.success('Product and images created successfully!');
       router.push('/merchant/dashboard/products');
     } catch (err: any) {
       toast.error(err.response?.data?.error || 'Failed to add product. Ensure slug is unique.');
@@ -146,11 +192,10 @@ export default function MerchantAddProductPage() {
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Slug (URL)</label>
                   <input
                     name="slug"
-                    required
-                    className="w-full mt-2 pl-4 pr-4 py-4 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-blue-600/20 focus:bg-white transition-all outline-none font-medium text-slate-900"
+                    readOnly
+                    className="w-full mt-2 pl-4 pr-4 py-4 bg-slate-100 border-none rounded-2xl text-sm font-medium text-slate-400 cursor-not-allowed outline-none"
                     value={formData.slug}
-                    onChange={handleChange}
-                    placeholder="minimalist-vessel"
+                    placeholder="Auto-generated..."
                   />
                 </div>
                 <div>
@@ -189,18 +234,46 @@ export default function MerchantAddProductPage() {
           <Card className="p-8 border-none shadow-sm space-y-8">
             <div className="flex items-center gap-3 border-b border-slate-50 pb-6">
               <ImageIcon className="text-blue-600 w-5 h-5" />
-              <CardTitle className="text-lg tracking-widest uppercase">Product Media</CardTitle>
+              <CardTitle className="text-lg tracking-widest uppercase">Product Media ({selectedImages.length}/6)</CardTitle>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="aspect-square bg-slate-50 border-2 border-dashed border-slate-100 rounded-3xl flex flex-col items-center justify-center gap-2 group hover:border-blue-200 transition-all cursor-pointer">
-                <div className="p-3 bg-white rounded-2xl shadow-sm group-hover:scale-110 transition-transform">
-                  <Plus className="text-slate-400" size={24} />
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              {imagePreviews.map((preview, index) => (
+                <div key={index} className="relative aspect-square rounded-3xl overflow-hidden group">
+                  <img src={preview} alt={`Preview ${index}`} className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <button 
+                      onClick={() => removeImage(index)}
+                      className="p-3 bg-white text-rose-500 rounded-2xl shadow-xl hover:scale-110 transition-transform"
+                    >
+                      <Trash2 size={20} />
+                    </button>
+                  </div>
+                  {index === 0 && (
+                    <div className="absolute top-3 left-3 px-3 py-1 bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg">
+                      Primary
+                    </div>
+                  )}
                 </div>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Add Media</span>
-              </div>
+              ))}
+              
+              {selectedImages.length < 6 && (
+                <label className="aspect-square bg-slate-50 border-2 border-dashed border-slate-100 rounded-3xl flex flex-col items-center justify-center gap-2 group hover:border-blue-200 transition-all cursor-pointer">
+                  <input 
+                    type="file" 
+                    multiple 
+                    accept="image/*" 
+                    className="hidden" 
+                    onChange={handleImageChange}
+                  />
+                  <div className="p-3 bg-white rounded-2xl shadow-sm group-hover:scale-110 transition-transform">
+                    <Plus className="text-slate-400" size={24} />
+                  </div>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center px-4">Add Media</span>
+                </label>
+              )}
             </div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Recommended: 800x1000px, PNG or JPG (Max 5MB)</p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Recommended: 800x1000px, PNG or JPG (Max 6 photos)</p>
           </Card>
         </div>
 
@@ -213,18 +286,33 @@ export default function MerchantAddProductPage() {
             </div>
 
             <div className="space-y-6">
-              <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Base Price ($)</label>
-                <input
-                  name="price"
-                  type="number"
-                  step="0.01"
-                  required
-                  className="w-full mt-2 pl-4 pr-4 py-4 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-blue-600/20 focus:bg-white transition-all outline-none font-medium text-slate-900"
-                  value={formData.price}
-                  onChange={handleChange}
-                  placeholder="0.00"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Base Price ($)</label>
+                  <input
+                    name="price"
+                    type="number"
+                    step="0.01"
+                    required
+                    className="w-full mt-2 pl-4 pr-4 py-4 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-blue-600/20 focus:bg-white transition-all outline-none font-medium text-slate-900"
+                    value={formData.price}
+                    onChange={handleChange}
+                    placeholder="0.00"
+                  />
+                </div>
+                
+                <div>
+                  <label className="text-[10px] font-black text-rose-400 uppercase tracking-widest ml-1">Sale Price ($)</label>
+                  <input
+                    name="discount_price"
+                    type="number"
+                    step="0.01"
+                    className="w-full mt-2 pl-4 pr-4 py-4 bg-rose-50/30 border-none rounded-2xl text-sm focus:ring-2 focus:ring-rose-600/20 focus:bg-white transition-all outline-none font-medium text-slate-900"
+                    value={formData.discount_price}
+                    onChange={handleChange}
+                    placeholder="Optional"
+                  />
+                </div>
               </div>
               
               <div>

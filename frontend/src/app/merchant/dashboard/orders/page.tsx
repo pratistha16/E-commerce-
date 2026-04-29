@@ -12,6 +12,7 @@ import {
   Search, 
   Filter, 
   Download,
+  ShoppingBag,
   MoreVertical,
   ChevronLeft,
   ChevronRight,

@@ -39,16 +39,26 @@ export default function LoginPage() {
         const isSubdomain = window.location.hostname.split('.').length > 2 && !window.location.hostname.includes('localhost') || 
                           (window.location.hostname.includes('localhost') && window.location.hostname.split('.').length > 1 && window.location.hostname !== 'localhost');
         
-        if (user.role === 'ADMIN') {
-          router.push('/admin/dashboard');
-        } else if (user.role === 'VENDOR') {
+        if (user.role === 'ADMIN' || user.role === 'CUSTOMER') {
           if (isSubdomain) {
-            router.push('/dashboard');
-          } else {
-            router.push('/merchant/dashboard');
+            setError('Admins and Customers must log in from the main domain.');
+            logout();
+            setLoading(false);
+            return;
           }
-        } else {
-          router.push('/profile');
+          if (user.role === 'ADMIN') {
+            router.push('/admin/dashboard');
+          } else {
+            router.push('/profile');
+          }
+        } else if (user.role === 'VENDOR') {
+          if (!isSubdomain) {
+            setError('Merchants must log in from their store\'s subdomain.');
+            logout();
+            setLoading(false);
+            return;
+          }
+          router.push('/dashboard');
         }
       } else {
         router.push('/');

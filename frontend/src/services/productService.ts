@@ -13,6 +13,16 @@ export const ProductService = {
     return response.data;
   },
 
+  async getSimilarProducts(slug: string) {
+    const response = await api.get<Product[]>(`/products/${slug}/similar/`);
+    return response.data;
+  },
+
+  async getRecommendations() {
+    const response = await api.get<Product[]>(`/products/recommendations/`);
+    return response.data;
+  },
+
   async getCategories() {
     try {
       const response = await api.get<any>('/categories/');

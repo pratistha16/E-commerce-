@@ -33,7 +33,7 @@ export default function MerchantSidebar({ onClose }: { onClose?: () => void }) {
   const { logout, user } = useAuth();
 
   return (
-    <div className="flex h-full w-full flex-col bg-white text-slate-600 border-r border-slate-100 shadow-sm relative overflow-hidden">
+    <div className="flex h-full w-72 shrink-0 flex-col bg-white text-slate-600 border-r border-slate-100 shadow-sm relative overflow-hidden">
       <div className="flex h-20 items-center justify-between px-8 border-b border-slate-50 shrink-0">
         <Link href="/" className="flex items-center gap-3 group">
           <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-black text-sm">

@@ -20,23 +20,30 @@ class ProductListView(generics.ListAPIView):
     search_fields = ('name', 'description')
     ordering_fields = ('price', 'created_at')
 
-    @action(detail=True, methods=['get'])
-    def similar_products(self, request, slug=None):
-        product = Product.objects.get(slug=slug)
-        # Simple recommendation logic: Same category, excluding self, limited to 4
-        similar = Product.objects.filter(
-            category=product.category, 
-            is_available=True
-        ).exclude(id=product.id)[:4]
-        return Response(ProductListSerializer(similar, many=True).data)
+class ProductRecommendationsView(generics.ListAPIView):
+    serializer_class = ProductListSerializer
+    permission_classes = (permissions.AllowAny,)
 
-    @action(detail=False, methods=['get'])
-    def recommendations(self, request):
+    def get_queryset(self):
         # Recommend most reviewed products as "Trending"
-        trending = Product.objects.filter(is_available=True).annotate(
+        return Product.objects.filter(is_available=True).annotate(
             review_count=Count('reviews')
         ).order_by('-review_count')[:8]
-        return Response(ProductListSerializer(trending, many=True).data)
+
+class SimilarProductsView(generics.ListAPIView):
+    serializer_class = ProductListSerializer
+    permission_classes = (permissions.AllowAny,)
+
+    def get_queryset(self):
+        slug = self.kwargs.get('slug')
+        try:
+            product = Product.objects.get(slug=slug)
+            return Product.objects.filter(
+                category=product.category, 
+                is_available=True
+            ).exclude(id=product.id)[:4]
+        except Product.DoesNotExist:
+            return Product.objects.none()
 
 class ProductDetailView(generics.RetrieveAPIView):
     queryset = Product.objects.filter(is_available=True)

@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { TenantProvider } from "@/context/TenantContext";
+import { CartProvider } from "@/context/CartContext";
 import { Toaster } from "@/components/ui/sonner";
 
 const inter = Inter({
@@ -28,8 +29,10 @@ export default function RootLayout({
       >
         <AuthProvider>
           <TenantProvider>
-            <main className="flex-grow">{children}</main>
-            <Toaster position="top-right" richColors />
+            <CartProvider>
+              <main className="flex-grow">{children}</main>
+              <Toaster position="top-right" richColors />
+            </CartProvider>
           </TenantProvider>
         </AuthProvider>
       </body>

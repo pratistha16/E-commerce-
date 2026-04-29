@@ -2,16 +2,22 @@
 
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useCart } from '@/context/CartContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import api from '@/lib/api';
-import { User, Mail, Phone, MapPin, Calendar, ShoppingBag, ShieldCheck, Camera, Heart, Settings, ArrowRight, Package, CreditCard, LogOut, Truck } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Calendar, ShoppingBag, ShieldCheck, Camera, Heart, Settings, ArrowRight, Package, CreditCard, LogOut, Truck, ShoppingCart } from 'lucide-react';
 import { OrderService } from '@/services/orderService';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import RecommendedProducts from '@/components/RecommendedProducts';
+import StorefrontNavbar from '@/components/landing/StorefrontNavbar';
+import CartDrawer from '@/components/landing/CartDrawer';
 import Link from 'next/link';
+
+import ProfileSidebar from '@/components/profile/ProfileSidebar';
 
 export default function UserProfilePage() {
   const { user, logout } = useAuth();
+  const { totalItems, setIsCartOpen, items, totalPrice } = useCart();
   const [formData, setFormData] = useState({
     email: user?.email || '',
     phone_number: user?.phone_number || '',
@@ -55,73 +61,16 @@ export default function UserProfilePage() {
     }
   };
 
-  const sidebarLinks = [
-    { icon: User, label: 'Profile Information', href: '/profile', active: true },
-    { icon: ShoppingBag, label: 'Order History', href: '/orders', active: false },
-    { icon: Heart, label: 'My Wishlist', href: '#', active: false },
-    { icon: CreditCard, label: 'Payment Methods', href: '#', active: false },
-    { icon: MapPin, label: 'Saved Addresses', href: '#', active: false },
-    { icon: Settings, label: 'Account Settings', href: '#', active: false },
-  ];
-
   return (
     <ProtectedRoute>
+      <StorefrontNavbar />
+      <CartDrawer />
+      
       <div className="bg-slate-50 min-h-screen py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col lg:flex-row gap-8">
             
-            {/* Left: Sidebar Navigation */}
-            <aside className="lg:w-80 space-y-6">
-              <div className="bg-white rounded-4xl p-8 border border-slate-100 shadow-soft text-center">
-                <div className="relative inline-block mb-6">
-                  <div className="h-28 w-28 bg-gradient-to-br from-primary-400 to-primary-600 rounded-full flex items-center justify-center text-white text-4xl font-black shadow-elevated">
-                    {user?.username?.[0]?.toUpperCase() || 'U'}
-                  </div>
-                  <button className="absolute bottom-0 right-0 p-2.5 bg-slate-900 text-white rounded-full border-4 border-white hover:scale-110 transition-transform shadow-lg">
-                    <Camera size={14} />
-                  </button>
-                </div>
-                <h2 className="text-xl font-black text-slate-900 tracking-tight">{user?.username}</h2>
-                <p className="text-primary-600 font-bold uppercase text-[10px] tracking-widest mt-1">Premium Member</p>
-                
-                <div className="grid grid-cols-2 gap-3 mt-8">
-                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                    <p className="text-xl font-black text-slate-900">{orderCount}</p>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Orders</p>
-                  </div>
-                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                    <p className="text-xl font-black text-slate-900">0</p>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Wishlist</p>
-                  </div>
-                </div>
-              </div>
-
-              <nav className="bg-white rounded-4xl p-6 border border-slate-100 shadow-soft">
-                <div className="space-y-1">
-                  {sidebarLinks.map((link) => (
-                    <Link
-                      key={link.label}
-                      href={link.href}
-                      className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl text-sm font-bold transition-all ${
-                        link.active 
-                        ? 'bg-accent text-white shadow-lg shadow-indigo-600/10' 
-                        : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
-                      }`}
-                    >
-                      <link.icon size={18} className={link.active ? 'text-white' : 'text-slate-400'} />
-                      {link.label}
-                    </Link>
-                  ))}
-                  <button
-                    onClick={logout}
-                    className="flex items-center gap-3 w-full px-4 py-3.5 rounded-2xl text-sm font-bold text-rose-500 hover:bg-rose-50 transition-all mt-4"
-                  >
-                    <LogOut size={18} />
-                    Sign Out
-                  </button>
-                </div>
-              </nav>
-            </aside>
+            <ProfileSidebar />
 
             {/* Right: Main Content */}
             <main className="flex-1 space-y-8">
@@ -159,7 +108,7 @@ export default function UserProfilePage() {
                       <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
                       <input
                         type="email"
-                        className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-900 focus:ring-2 focus:ring-accent/20 focus:bg-white transition-all outline-none"
+                        className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-900 focus:ring-2 focus:ring-blue-600/20 focus:bg-white transition-all outline-none"
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       />
@@ -169,7 +118,7 @@ export default function UserProfilePage() {
                       <input
                         type="text"
                         placeholder="+1 (555) 000-0000"
-                        className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-900 focus:ring-2 focus:ring-accent/20 focus:bg-white transition-all outline-none"
+                        className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-900 focus:ring-2 focus:ring-blue-600/20 focus:bg-white transition-all outline-none"
                         value={formData.phone_number}
                         onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
                       />
@@ -188,7 +137,7 @@ export default function UserProfilePage() {
                     <textarea
                       rows={3}
                       placeholder="Street address, City, State, ZIP"
-                      className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-900 focus:ring-2 focus:ring-accent/20 focus:bg-white transition-all outline-none resize-none"
+                      className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-900 focus:ring-2 focus:ring-blue-600/20 focus:bg-white transition-all outline-none resize-none"
                       value={formData.address}
                       onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                     />
@@ -206,12 +155,74 @@ export default function UserProfilePage() {
                 </form>
               </section>
 
+              {/* Cart Quick View Section */}
+              <section className="bg-white rounded-4xl p-10 border border-slate-100 shadow-soft">
+                <div className="flex items-center justify-between mb-8">
+                  <div>
+                    <h2 className="text-2xl font-black text-slate-900 tracking-tight">Your Shopping Bag</h2>
+                    <p className="text-slate-500 text-sm font-medium mt-1">You have {totalItems} items in your cart.</p>
+                  </div>
+                  <div className="h-12 w-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center">
+                    <ShoppingCart size={24} />
+                  </div>
+                </div>
+
+                {items.length > 0 ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 gap-4">
+                      {items.slice(0, 3).map((item) => (
+                        <div key={item.product.id} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                          <div className="h-16 w-16 rounded-xl overflow-hidden bg-white flex-shrink-0 border border-slate-100">
+                            <img 
+                              src={item.product.images?.[0]?.image || 'https://via.placeholder.com/150'} 
+                              alt={item.product.name}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-bold text-slate-900 truncate">{item.product.name}</h4>
+                            <p className="text-xs text-slate-500 font-medium">Qty: {item.quantity} • ${item.product.price}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-black text-slate-900">${(item.product.price * item.quantity).toFixed(2)}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {items.length > 3 && (
+                      <p className="text-center text-xs font-bold text-slate-400 py-2">
+                        + {items.length - 3} more items
+                      </p>
+                    )}
+                    <div className="pt-6 border-t border-slate-100 flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Total Value</p>
+                        <p className="text-2xl font-black text-slate-900">${totalPrice.toFixed(2)}</p>
+                      </div>
+                      <button 
+                        onClick={() => setIsCartOpen(true)}
+                        className="btn btn-primary !h-12 !px-8 text-sm"
+                      >
+                        View Full Cart
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-12 bg-slate-50 rounded-3xl border border-dashed border-slate-200">
+                    <p className="text-slate-500 font-medium mb-4">Your bag is currently empty.</p>
+                    <Link href="/products" className="text-blue-600 font-black text-sm uppercase tracking-widest hover:underline">
+                      Start Shopping
+                    </Link>
+                  </div>
+                )}
+              </section>
+
               {/* Order Tracking Quick View */}
               <section className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-4xl p-10 text-white shadow-elevated overflow-hidden relative">
-                <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-accent/20 rounded-full blur-3xl" />
+                <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-blue-600/20 rounded-full blur-3xl" />
                 <div className="relative flex flex-col md:flex-row items-center justify-between gap-8">
                   <div className="space-y-4">
-                    <div className="inline-flex items-center gap-2 bg-accent/20 text-accent px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
+                    <div className="inline-flex items-center gap-2 bg-blue-600/20 text-blue-400 px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
                       Latest Order Status
                     </div>
                     <h2 className="text-3xl font-black tracking-tight">Your package is on its way!</h2>
@@ -222,7 +233,7 @@ export default function UserProfilePage() {
                   </div>
                   <div className="relative">
                     <div className="h-40 w-40 border-8 border-slate-700 rounded-full flex items-center justify-center">
-                      <Package size={64} className="text-accent" />
+                      <Package size={64} className="text-blue-600" />
                     </div>
                     <div className="absolute -bottom-2 -right-2 bg-emerald-500 p-3 rounded-full border-4 border-slate-800">
                       <Truck size={20} className="text-white" />

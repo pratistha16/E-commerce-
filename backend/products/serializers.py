@@ -56,6 +56,8 @@ class ProductListSerializer(serializers.ModelSerializer):
         fields = ('id', 'vendor', 'category', 'brand', 'name', 'slug', 'price', 'discount_price', 'final_price', 'stock', 'is_available', 'images', 'average_rating')
 
     def get_average_rating(self, obj):
+        if not hasattr(obj, 'reviews'):
+            return 0
         reviews = obj.reviews.all()
         if not reviews:
             return 0
@@ -64,7 +66,13 @@ class ProductListSerializer(serializers.ModelSerializer):
 class ProductDetailSerializer(serializers.ModelSerializer):
     vendor = VendorSerializer(read_only=True)
     category = CategorySerializer(read_only=True)
+    category_id = serializers.PrimaryKeyRelatedField(
+        queryset=Category.objects.all(), source='category', write_only=True
+    )
     brand = BrandSerializer(read_only=True)
+    brand_id = serializers.PrimaryKeyRelatedField(
+        queryset=Brand.objects.all(), source='brand', write_only=True, required=False, allow_null=True
+    )
     images = ProductImageSerializer(many=True, read_only=True)
     specifications = ProductSpecificationSerializer(many=True, read_only=True)
     variants = ProductVariantSerializer(many=True, read_only=True)
@@ -77,6 +85,8 @@ class ProductDetailSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
     def get_average_rating(self, obj):
+        if not hasattr(obj, 'reviews'):
+            return 0
         reviews = obj.reviews.all()
         if not reviews:
             return 0
